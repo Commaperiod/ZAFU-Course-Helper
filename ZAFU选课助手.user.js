@@ -663,6 +663,9 @@
         document.getElementById('xk-start-btn').disabled = true;
         document.getElementById('xk-stop-btn').disabled = false;
 
+        // 记录监控状态，保证刷新页面后也能自动恢复
+        sessionStorage.setItem('xk_is_monitoring', 'true');
+
         // 监控期间覆盖 alert/confirm 避免弹窗阻塞自动操作
         window.alert = function (msg) { writeLogToDB('拦截提示: ' + msg); return true; };
         window.confirm = function (msg) { writeLogToDB('拦截确认: ' + msg); return true; };
@@ -687,6 +690,7 @@
         document.getElementById('xk-start-btn').disabled = false;
         document.getElementById('xk-stop-btn').disabled = true;
 
+        sessionStorage.removeItem('xk_is_monitoring');
         sessionStorage.removeItem('xk_queue_running');
         activeQueue.forEach(t => {
             if (t.status !== '已成功') t.status = '等待中';
@@ -694,7 +698,7 @@
         uiQueue = JSON.parse(JSON.stringify(activeQueue));
         saveQueueToDB();
         renderQueue();
-        writeLogToDB('监控已停止。');
+        writeLogToDB('监控已手动停止。');
     }
 
     document.getElementById('xk-start-btn').addEventListener('click', startMonitoring);
@@ -703,9 +707,10 @@
     // 初始化
     window.addEventListener('load', () => {
         renderQueue();
-        const wasRunning = sessionStorage.getItem('xk_queue_running');
-        if (wasRunning === 'true' && activeQueue.length > 0) {
-            writeLogToDB('[重载恢复] 自动恢复监控中...');
+        const isMon = sessionStorage.getItem('xk_is_monitoring');
+        if (isMon === 'true' && activeQueue.length > 0) {
+            const isRunSession = sessionStorage.getItem('xk_queue_running') === 'true';
+            writeLogToDB(isRunSession ? '[重载恢复] 自动恢复高频抢课...' : '[重载恢复] 自动恢复定时等待...');
             startMonitoring();
         }
     });
